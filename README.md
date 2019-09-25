@@ -10,9 +10,7 @@ A linear projection technique for finding a 2D view that capture interpretable p
 
   fpp_example.ipynb - fpp usage examples
 
-### Dataset Description:
-
-RNA-seq-data.npy - RNA sequence dataset for five different cancer type https://archive.ics.uci.edu/ml/datasets/gene+expression+cancer+RNA-Seq
+### Test Dataset Description:
 
 Circle_in_5D_cube.npy - synthetic dataset where a 2D circle pattern of the function exists in a 5D space.
 
@@ -43,6 +41,6 @@ Circle_in_30D.npy - synthetic dataset where a 2D circle pattern of the function 
   ```
 
 
-Review and released under LLNL-CODE-791217
+Reviewed and released under LLNL-CODE-791217
 
 Author(s): Shusen Liu (liu42@llnl.gov), Rushil Anirudh (anirudh1@llnl.gov)
