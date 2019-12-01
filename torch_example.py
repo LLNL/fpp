@@ -16,13 +16,25 @@ sample = xsample[:,:-1]
 f = xsample[:,-1]
 print("sample:", sample.shape)
 
+########## MNIST dataset ##########
+'''
+mnist = tf.keras.datasets.mnist
+(X_train, y_train),(X_test, y_test) = mnist.load_data()
+X_train, X_test = X_train / 255.0, X_test / 255.0
+X_train = X_train.reshape( (X_train.shape[0], X_train.shape[1]*X_train.shape[2]))
+X_test = X_test.reshape( (X_test.shape[0], X_test.shape[1]*X_test.shape[2]))
+sample = X_train
+f = (y_train)
+print (np.min(f), np.max(f), f.shape, sample.shape)
+'''
+
 ### setup fpp input ####
-model = fpp()
+model = fpp(printOutput=True)
 model.setup(sample, f, degree=3)
 
 ### training ####
 start = time.time()
-model.train(100, 50) ### circle
+model.train(50, 50) ### circle
 end = time.time()
 print("timing:", end-start)
 
