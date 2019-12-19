@@ -93,7 +93,7 @@ class fpp:
         self.optimizer.step()
 
     ######### the classification setup #######
-    '''
+    #'''
     def setupMultiClass(self, sample, f, lr=1e-3, reg_weight=1e-5, nonlinear = False):
         self.classification = True
         self.nonlinear = nonlinear
@@ -102,56 +102,83 @@ class fpp:
             self.f=np.matrix(f).T
         else:
             self.f = f
-        self.n_class = self.f.shape[1]
+        self.n_class = np.max(self.f)+1
+        # self.n_class = self.f.shape[1]
+        print("n_class:", self.n_class)
 
         # torch.reset_default_graph()
-        torch.set_random_seed(self.randomSeed)
+        torch.manual_seed(self.randomSeed)
         np.random.seed(self.randomSeed)
-
 
         x_dim = sample.shape[1]
         self.featureSize = x_dim
-        self.x = torch.placeholder(torch.float32, shape=[None, x_dim])
-        y = torch.placeholder(torch.float32, shape=[None, self.n_class])
         self._R2 = torch.zeros([self.n_class])
 
-        self.W = torch.FloatTensor( (x_dim,2) )
+        self.W = Variable(torch.zeros( [x_dim,2] ), requires_grad=True)
         torch.nn.init.normal_(self.W, mean=0, std=0.02)
 
-        _,self.U,_ = torch.svd(self.W)
-        self.x_hat = torch.matmul(self.x,self.U)
+        if self.nonlinear:
+            self.middleLayerSize = self.n_class #if n_class == 2, then use 2 as the middle layer size
+            if self.n_class>2:
+                self.middleLayerSize = self.n_class//2
+            # print("middleLayerSize:", self.middleLayerSize)
+            
+            self.nl_W1 = Variable(torch.zeros( [2, self.middleLayerSize] ), requires_grad=True)
+            self.nl_b1 = Variable(torch.zeros( [self.middleLayerSize] ), requires_grad=True)
 
+            # print("nl_W1:", self.nl_W1.size())
+
+            self.cW = Variable(torch.zeros( [self.middleLayerSize, self.n_class] ), requires_grad=True) #slop
+            self.cb = Variable(torch.zeros([self.n_class]), requires_grad=True) #bias
+
+            torch.nn.init.normal_(self.nl_W1, mean=0.0, std=0.1)
+            torch.nn.init.normal_(self.cW, mean=0.0, std=0.1)
+
+            # torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.02)
+            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
+
+            self.optimizer = torch.optim.Adam([self.W, self.nl_W1, self.nl_b1, self.cW, self.cb], lr=lr)
+        else:
+            self.cW = Variable(torch.zeros( [self.middleLayerSize,self.n_class] )) #slop
+            self.cb = Variable(torch.zeros([self.n_class])) #bias
+
+            torch.nn.init.normal_(self.cW, mean=0.0, std=0.02)
+            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
+
+            self.optimizer = torch.optim.Adam([self.W, self.cW, self.cb], lr=lr)
+
+        self.criteria = torch.nn.CrossEntropyLoss()
+        # self.criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+
+
+
+    def train_classifier(self, x, y):
+        x = torch.FloatTensor(x)
+        y = torch.LongTensor(y).squeeze()
+
+        self._R2 = [0]*self.n_class
+        self.U,_,_ = torch.svd(self.W)
+        self.x_hat = torch.matmul(x,self.U)
+        
         #### add nonlinearility #####
         if self.nonlinear:
-            middleLayerSize = self.n_class #if n_class == 2, then use 2 as the middle layer size
-            if self.n_class>2:
-                middleLayerSize = self.n_class//2
-            nl_W1 = Variable(torch.FloatTensor( (2,middleLayerSize) ))
-            nl_b1 = Variable(torch.zeros( (middleLayerSize) ))
-            self.nl_x_hat = torch.nn.sigmoid(torch.matmul(self.x_hat, nl_W1) + nl_b1)
-            # self.nl_x_hat = torch.nn.relu(torch.matmul(self.x_hat, nl_W1) + nl_b1)
+            # print(self.x_hat.size(), self.nl_W1.size())
+            self.nl_x_hat = torch.sigmoid(torch.matmul(self.x_hat, self.nl_W1) + self.nl_b1)
+            # self.nl_x_hat = torch.nn.relu(torch.matmul(self.x_hat, self.nl_W1) + self.nl_b1)
 
-            # nl_W2 = Variable(torch.truncated_normal([self.n_class/3,self.n_class/2]), name='NL_slope_1')
-            # nl_b2 = Variable(torch.zeros([self.n_class/2]), name='NL_bias_2')
-            # self.nl_x_hat = torch.nn.sigmoid(torch.matmul(self.nl1_x_hat, nl_W2) + nl_b2)
-
-            cW = Variable(torch.truncated_normal([middleLayerSize,self.n_class]), name='slope')
-            cb = Variable(torch.zeros([self.n_class]), name='bias')
-            self.Y_pred = torch.matmul(self.nl_x_hat, cW) + cb
+            # print(self.nl_x_hat.size(), self.cW.size())
+            self.Y_pred = torch.matmul(self.nl_x_hat, self.cW) + self.cb
         else:
-            cW = Variable(torch.truncated_normal([2,self.n_class]), name='slope')
-            cb = Variable(torch.zeros([self.n_class]), name='bias')
-            self.Y_pred = torch.matmul(self.x_hat, cW) + cb
+            self.Y_pred = torch.matmul(self.x_hat, self.cW) + self.cb
 
+        # print("pred:",self.Y_pred.size(), "label:",y.size())
+        self.loss = self.criteria(self.Y_pred, y)
 
-        self.reconstruction_loss = torch.reduce_mean(torch.nn.softmax_cross_entropy_with_logits_v2(logits=self.Y_pred, labels=y))
+        self.optimizer.zero_grad()
+        self.loss.backward()
+        # print(self.loss)
 
-
-        self.optimizer = torch.train.AdamOptimizer(lr).minimize(self.reconstruction_loss)
-
-        # self.saver = torch.train.Saver()
-        # self.ckpt = torch.train.get_checkpoint_state('./func_project')
-    '''
+        self.optimizer.step()
 
     def reset(self):
         # self.sess.run(torch.global_variables_initializer())
@@ -193,7 +220,10 @@ class fpp:
                 batch = self.sampleBuffer[ start_idx:start_idx+batchSize, :]
                 y_batch = self.fBuffer[start_idx:start_idx+batchSize, :]
 
-                self.train_regressor(batch, y_batch)
+                if self.classification == False:
+                    self.train_regressor(batch, y_batch)
+                else:
+                    self.train_classifier(batch, y_batch)
 
                 if self.printOutput:
                     if i%500==0:
@@ -205,7 +235,7 @@ class fpp:
     ####### evaluate global behavior ######
     def eval(self):
         # print('Loss is :',loss)
-        return self.U, self.x_hat, self.loss, self._R2
+        return self.U.detach().numpy(), self.x_hat.detach().numpy(), self.loss, self._R2
 
     ####### estimate p-value ##########
     def p_value(self, iteration=30):
