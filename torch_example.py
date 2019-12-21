@@ -31,7 +31,6 @@ print("timing:", end-start)
 from pylab import rcParams
 rcParams['figure.figsize'] = 6, 5
 proj_mat, embedding, loss, R2 = model.eval()
-proj_mat = proj_mat.detach().numpy()
 embedding = np.matmul(sample, proj_mat)
 print("embedding:", embedding.shape)
 plt.scatter(embedding[:,0], embedding[:,1], c=f, cmap="Spectral", alpha=0.8, s=8)
@@ -50,16 +49,6 @@ sample = X_train
 f = (y_train)
 print (np.min(f), np.max(f), f.shape, sample.shape)
 
-# def convertClassToOneHot(label):
-#     # pass
-#     labelSize = len(np.unique(label))
-#     f = np.zeros((len(label), labelSize))
-#     for index, l in enumerate(label):
-#         f[index, l] = 1.0
-#     return f
-
-# f = convertClassToOneHot(f)
-
 model = fpp()
 model.setupMultiClass(sample, f, nonlinear=True)
 
@@ -67,8 +56,10 @@ model.reset()
 start = time.time()
 model.train(20, 100) ### MNIST
 
-proj_mat, embedding, loss, R2 = model.eval()
+proj_mat, loss, _ = model.eval()
 print("Global loss:", loss)
 end = time.time()
 print("computation time: ", end - start, "(s)")
+
+embedding = np.matmul(X_train, proj_mat)
 plt.scatter(embedding[:,0], embedding[:,1], c=y_train, cmap="tab10", alpha=1.0, s=5)

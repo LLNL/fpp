@@ -228,10 +228,6 @@ class fpp:
         # print('Loss is :',loss)
         x_proj,proj_mat,y_regress, self.loss, self.R2 = self.sess.run([self.x_hat,self.U,self.Y_pred,self.reconstruction_loss, self._R2],feed_dict={self.x:self.sample,self.y:self.f})
         # x_proj,proj_mat,y_regress,reg = self.sess.run([self.x_hat,self.U,self.Y_pred,self.wts],feed_dict={self.x:self.sample})
-        # R = [r[0] for r in reg]
-        # plt.plot(R,'x-')
-        # plt.grid()
-        # plt.show()
         return proj_mat, x_proj, self.loss, self.R2
         # x_proj,y_regress = sess.run([x_hat,Y_pred],feed_dict={x:sample})
 

@@ -85,7 +85,7 @@ class fpp:
             self._R2[j] = torch.sub(torch.FloatTensor([1.0]), torch.div(unexplained_error, total_error))
 
         self.loss = (loss+reg)/self.n_class
-        print("loss:", self.loss)
+        # print("loss:", self.loss)
         
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -93,7 +93,6 @@ class fpp:
         self.optimizer.step()
 
     ######### the classification setup #######
-    #'''
     def setupMultiClass(self, sample, f, lr=1e-3, reg_weight=1e-5, nonlinear = False):
         self.classification = True
         self.nonlinear = nonlinear
@@ -131,24 +130,26 @@ class fpp:
             self.cW = Variable(torch.zeros( [self.middleLayerSize, self.n_class] ), requires_grad=True) #slop
             self.cb = Variable(torch.zeros([self.n_class]), requires_grad=True) #bias
 
+            ## init slop
             torch.nn.init.normal_(self.nl_W1, mean=0.0, std=0.1)
             torch.nn.init.normal_(self.cW, mean=0.0, std=0.1)
 
-            # torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.02)
-            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
+            ## init bias
+            torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.1)
+            torch.nn.init.normal_(self.cb, mean=0.0, std=0.1)
 
             self.optimizer = torch.optim.Adam([self.W, self.nl_W1, self.nl_b1, self.cW, self.cb], lr=lr)
         else:
-            self.cW = Variable(torch.zeros( [self.middleLayerSize,self.n_class] )) #slop
+            self.cW = Variable(torch.zeros( [2,self.n_class] )) #slop
             self.cb = Variable(torch.zeros([self.n_class])) #bias
 
             torch.nn.init.normal_(self.cW, mean=0.0, std=0.02)
-            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
+            torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
 
             self.optimizer = torch.optim.Adam([self.W, self.cW, self.cb], lr=lr)
 
-        self.criteria = torch.nn.CrossEntropyLoss()
-        # self.criteria = torch.nn.CrossEntropyLoss(reduction='mean')
+        # self.criteria = torch.nn.CrossEntropyLoss()
+        self.criteria = torch.nn.CrossEntropyLoss(reduction='mean')
 
 
 
@@ -164,9 +165,7 @@ class fpp:
         if self.nonlinear:
             # print(self.x_hat.size(), self.nl_W1.size())
             self.nl_x_hat = torch.sigmoid(torch.matmul(self.x_hat, self.nl_W1) + self.nl_b1)
-            # self.nl_x_hat = torch.nn.relu(torch.matmul(self.x_hat, self.nl_W1) + self.nl_b1)
-
-            # print(self.nl_x_hat.size(), self.cW.size())
+            # self.nl_x_hat = torch.relu(torch.matmul(self.x_hat, self.nl_W1) + self.nl_b1)
             self.Y_pred = torch.matmul(self.nl_x_hat, self.cW) + self.cb
         else:
             self.Y_pred = torch.matmul(self.x_hat, self.cW) + self.cb
@@ -176,13 +175,25 @@ class fpp:
 
         self.optimizer.zero_grad()
         self.loss.backward()
-        # print(self.loss)
-
         self.optimizer.step()
 
     def reset(self):
-        # self.sess.run(torch.global_variables_initializer())
-        pass
+        if self.classification:
+            if self.nonlinear:
+                torch.nn.init.normal_(self.nl_W1, mean=0.0, std=0.1)
+                torch.nn.init.normal_(self.cW, mean=0.0, std=0.1)
+                ## init bias
+                torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.1)
+                torch.nn.init.normal_(self.cb, mean=0.0, std=0.1)
+            else:
+
+                torch.nn.init.normal_(self.cW, mean=0.0, std=0.1)
+                torch.nn.init.normal_(self.cb, mean=0.0, std=0.1)
+        else:
+
+            torch.nn.init.normal_(self.W, mean=0, std=0.02)
+            torch.nn.init.normal_(self.wts, mean=0.5, std=0.2)
+
 
 
     def train(self, epoches=1.0, batchSize = 200, minimalStep = 100):
@@ -232,12 +243,12 @@ class fpp:
                         print('step {:d} reconstruction error: {:.2f}'.format(i, float(self.loss) ))
 
 
-    ####### evaluate global behavior ######
+    ####### return computation result ######
     def eval(self):
-        # print('Loss is :',loss)
-        return self.U.detach().numpy(), self.x_hat.detach().numpy(), self.loss, self._R2
+        return self.U.detach().cpu().numpy(), float(self.loss.detach().cpu()), self._R2
 
     ####### estimate p-value ##########
+    '''
     def p_value(self, iteration=30):
         originalLoss, originalR2 = self.loss = self.sess.run([self.loss, self._R2],feed_dict={self.x:self.sample,y:self.f})
         print("originalLoss:", originalLoss)
@@ -271,3 +282,4 @@ class fpp:
         print("lossList:", randomLossList)
         p = norm.cdf(originalLoss, mu, std)
         print("p-value (Loss):", p)
+    '''
