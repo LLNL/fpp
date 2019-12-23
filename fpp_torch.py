@@ -135,16 +135,16 @@ class fpp:
             torch.nn.init.normal_(self.cW, mean=0.0, std=0.1)
 
             ## init bias
-            torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.1)
-            torch.nn.init.normal_(self.cb, mean=0.0, std=0.1)
+            # torch.nn.init.normal_(self.nl_b1, mean=0.0, std=0.1)
+            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.1)
 
             self.optimizer = torch.optim.Adam([self.W, self.nl_W1, self.nl_b1, self.cW, self.cb], lr=lr)
         else:
             self.cW = Variable(torch.zeros( [2,self.n_class] )) #slop
             self.cb = Variable(torch.zeros([self.n_class])) #bias
 
-            torch.nn.init.normal_(self.cW, mean=0.0, std=0.02)
-            torch.nn.init.normal_(self.cb, mean=0.0, std=0.02)
+            torch.nn.init.normal_(self.cW, mean=0.0, std=0.2)
+            # torch.nn.init.normal_(self.cb, mean=0.0, std=0.2)
 
             self.optimizer = torch.optim.Adam([self.W, self.cW, self.cb], lr=lr)
 
@@ -160,7 +160,7 @@ class fpp:
         self._R2 = [0]*self.n_class
         self.U,_,_ = torch.svd(self.W)
         self.x_hat = torch.matmul(x,self.U)
-        
+
         #### add nonlinearility #####
         if self.nonlinear:
             # print(self.x_hat.size(), self.nl_W1.size())
