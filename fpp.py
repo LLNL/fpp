@@ -222,6 +222,10 @@ class fpp:
         y_regress = self.sess.run(self.Y_pred,feed_dict={self.x:self.sample})
         return y_regress
 
+    def predict(self, samples):
+        prediction = self.sess.run(self.Y_pred,feed_dict={self.x:samples})
+        return prediction
+
 
     ####### evaluate global behavior ######
     def eval(self):
