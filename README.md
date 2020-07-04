@@ -3,7 +3,7 @@
 A linear projection technique for finding a 2D view that capture interpretable pattern of the given function in a high-dimensional domain. The function can be univariate or multivariate, continuous (regression) or discrete (classification). The details of the method can be found in the corresponding paper: https://arxiv.org/pdf/1909.11804.pdf
 
 ### Dependency:
-  tensorflow, numpy
+  tensorflow (<=1.15.0), numpy
 
 ### File Description:
   fpp.py - function preserving projection class
