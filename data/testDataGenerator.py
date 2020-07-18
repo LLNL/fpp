@@ -41,6 +41,24 @@ class funcPatternGenerator:
         # np.save(filename, data)
         return data
 
+    def generateHDPointCloud(self, func, filename, cn=3000, dim=10):
+        #function will determine the where to put the points
+        #cn - candidate count
+        x = np.random.uniform(-1.0,1.0,cn)
+        y = np.random.uniform(-1.0,1.0,cn)
+        f = func(x, y)
+        x = x[f>0.5]
+        y = y[f>0.5]
+        f = f[f>0.5]
+        n = len(f)
+        paddingDim = np.zeros( (n, dim-2) )
+        data = np.concatenate((np.matrix(x).T, np.matrix(y).T, paddingDim), axis=1)
+        rotation = self.randomRotation(dim)
+        data = data*rotation
+        print(data.shape)
+        np.save(filename, data)
+        return data
+
     def generateHDPattern(self, func, filename, n=3000, dim = 30):
         #### generate 2D pattern #####
 
@@ -82,6 +100,38 @@ class funcPatternGenerator:
         data = data*rotation
         data = np.concatenate( (data, np.matrix(f).T), axis=1 )
         # print data.shape
+        np.save(filename, data)
+
+    def generateMultiplePeaks(self, filename, peaks=3, d=5, nc=500, domainRange=1.0):
+        end = np.array([domainRange]*(d-1))
+        start = np.array([-domainRange]*(d-1))
+        # print("start", start)
+        # print("end", end)
+
+        listOfPeaks = []
+        listOfRange = []
+
+        cov = 0.1*np.identity(d-1)  # diagonal covariance
+        rotation = self.randomRotation(d)
+        for i in range(peaks):
+            mean = start + i*(end-start)*(1.0/(peaks-1))
+            print("mean", mean)
+            X = np.random.multivariate_normal(mean, cov, nc).T
+            diff=(X-np.matrix(mean).T)
+            z = 3.0*np.linalg.norm(diff, axis=0)
+            print(X.shape,np.matrix(z).shape)
+            D = np.concatenate([X, np.matrix(z)], axis=0)
+
+            listOfPeaks.append(D) #domain
+            listOfRange.append(z) #range
+
+        domain = np.concatenate(listOfPeaks, axis=1)
+        f = np.concatenate(listOfRange)
+        print("domain", domain.shape)
+        print("f", np.matrix(f).shape)
+        print("rot", rotation.shape)
+        data = np.concatenate([rotation*domain, np.matrix(f)], axis=0).T
+        print("data", data.shape)
         np.save(filename, data)
 
     def plot2D(self, x, y, f):
@@ -184,7 +234,9 @@ def ackley(x, y, z, d=3):
     # print Sum.shape
     return Sum
 ########### test ############
-# gen = funcPatternGenerator()
+gen = funcPatternGenerator()
+# gen.generateHDPointCloud(circle, "data/circle_cloud_10D.npy")
+gen.generateMultiplePeaks("threePeaks_3D.npy")
 # gen.generate2DPattern(circle, "data/circle_in_5D_cube.npy")
 # gen.generate2DPattern(cross, "data/cross_in_5D_cube.npy")
 # gen.generate2DPattern(crossV, "data/crossV_in_5D_cube.npy")

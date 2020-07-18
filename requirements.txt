@@ -1,0 +1,2 @@
+tensorflow = 1.15.3
+tensorflow_probability = 0.7.0
